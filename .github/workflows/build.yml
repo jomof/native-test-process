@@ -4,10 +4,9 @@ name: Build
 # artifacts carry usable debug info, and uploads the per-runner zips. The
 # release workflow downloads these and publishes them.
 #
-# Native host configs (C++/Rust/Go on linux/macos/windows) are the gating
-# deliverable. Android and WASM cross-compilation runs on the Linux runner and
-# is currently best-effort (continue-on-error) while the cross toolchains
-# stabilize; the zips that do build are still validated and uploaded.
+# Every configuration is gating: native host configs (C++/Rust/Go on
+# linux/macos/windows) plus Android (all ABIs) and WASM cross-compilation,
+# which run on the Linux runner. A failure in any build or self-test fails CI.
 
 on:
   push:
@@ -69,10 +68,9 @@ jobs:
             Windows) python -m builder build --platform windows-x86_64 --no-manifest ;;
           esac
 
-      # ── Cross toolchains + builds (Linux only, best-effort) ──────────
+      # ── Cross toolchains + builds (Linux only, gating) ───────────────
       - name: Add Rust cross targets (Linux)
         if: runner.os == 'Linux'
-        continue-on-error: true
         run: |
           rustup target add \
             aarch64-linux-android armv7-linux-androideabi \
@@ -82,14 +80,12 @@ jobs:
       - name: Set up Android NDK (Linux)
         if: runner.os == 'Linux'
         id: ndk
-        continue-on-error: true
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r27
 
       - name: Install wasi-sdk (Linux)
         if: runner.os == 'Linux'
-        continue-on-error: true
         run: |
           set -euo pipefail
           ver="${WASI_SDK_MAJOR}.0"
@@ -99,9 +95,8 @@ jobs:
           sudo tar -C /opt -xzf /tmp/wasi-sdk.tar.gz
           echo "WASI_SDK_PATH=/opt/wasi-sdk-${ver}-x86_64-linux" >> "$GITHUB_ENV"
 
-      - name: Build Android configurations (Linux, best-effort)
+      - name: Build Android configurations (Linux)
         if: runner.os == 'Linux'
-        continue-on-error: true
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
         run: |
@@ -109,9 +104,8 @@ jobs:
             --platform android-arm64-v8a --platform android-armeabi-v7a \
             --platform android-x86_64 --platform android-x86
 
-      - name: Build WASM configurations (Linux, best-effort)
+      - name: Build WASM configurations (Linux)
         if: runner.os == 'Linux'
-        continue-on-error: true
         run: python -m builder build --no-manifest --platform wasm-wasm32-wasip1
 
       # ── Self-test everything that built ──────────────────────────────
