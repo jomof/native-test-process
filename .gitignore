@@ -1,0 +1,16 @@
+# Build output: every artifact is reproducible from source, nothing here is committed.
+/dist/
+/build/
+
+# Per-language tool caches.
+/target/
+**/__pycache__/
+*.pyc
+
+# Local debugger/SDK caches the self-test may populate.
+/.cache/
+
+# Editor/OS noise.
+.DS_Store
+.idea/
+.vscode/

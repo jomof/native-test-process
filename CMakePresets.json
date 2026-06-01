@@ -1,0 +1,43 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 20, "patch": 0 },
+  "comment": "Human-facing presets. The builder/ orchestrator usually passes the same flags directly, but these let you reproduce a configuration by hand: cmake --preset <name>.",
+  "configurePresets": [
+    {
+      "name": "native",
+      "displayName": "Host-native (-O0, full debug)",
+      "binaryDir": "${sourceDir}/build/native",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "FIXTURE_SYMBOLS": "embedded" }
+    },
+    {
+      "name": "native-separate",
+      "inherits": "native",
+      "displayName": "Host-native, separate symbols (Windows PDB / consult builder for ELF-Mach-O split)",
+      "binaryDir": "${sourceDir}/build/native-separate",
+      "cacheVariables": { "FIXTURE_SYMBOLS": "separate" }
+    },
+    {
+      "name": "android-arm64-v8a",
+      "displayName": "Android arm64-v8a via NDK",
+      "binaryDir": "${sourceDir}/build/android-arm64-v8a",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/android.cmake",
+      "cacheVariables": {
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-24",
+        "FIXTURE_SYMBOLS": "embedded"
+      }
+    },
+    {
+      "name": "wasm-wasip1",
+      "displayName": "WASM wasm32-wasip1 via wasi-sdk",
+      "binaryDir": "${sourceDir}/build/wasm-wasip1",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/wasi.cmake",
+      "cacheVariables": { "FIXTURE_SYMBOLS": "embedded" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "native", "configurePreset": "native" },
+    { "name": "android-arm64-v8a", "configurePreset": "android-arm64-v8a" },
+    { "name": "wasm-wasip1", "configurePreset": "wasm-wasip1" }
+  ]
+}

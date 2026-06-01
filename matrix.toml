@@ -1,0 +1,162 @@
+# matrix.toml
+#
+# The single declarative source of truth for every testable configuration
+# this project builds, self-tests, and publishes. The whole pipeline
+# (builder/) iterates this file; nothing about the configuration set is
+# hard-coded in Python.
+#
+# A "configuration" is the cross product:
+#
+#     program x language x platform x symbols
+#
+# pruned by capability rules in builder/matrix.py (e.g. WASM has no
+# separate-symbols mode; Go on Mach-O can't emit a usable .dSYM). Each
+# surviving configuration becomes one downloadable zip plus a row in the
+# published manifest.json.
+
+schema = 1
+
+# Pinned tag this build set publishes under. Bumping it is the single
+# action that moves a consumer (the DAP project) to a new fixture build,
+# mirroring jomof/lldb-testing + LldbDapDownloader.RELEASE_TAG.
+release_tag = "v0.1.0"
+
+# The language dimension. Each maps to one idiomatic toolchain module in
+# builder/toolchains/.
+languages = ["cpp", "rust", "go"]
+
+# The symbols dimension.
+#   embedded - debug info lives inside the primary artifact.
+#   separate - debug info is split into a sidecar (ELF .debug / Mach-O
+#              .dSYM / PE .pdb) linked back by build-id or debug-link.
+symbols = ["embedded", "separate"]
+
+
+# ---------------------------------------------------------------------------
+# Programs. Each is a tiny, parallel fixture implemented in every language.
+# Sources are relative to fixtures/. See docs/DAP-TESTS.md for the DAP
+# behaviours each one is designed to exercise.
+# ---------------------------------------------------------------------------
+
+[programs.hello]
+description = "Minimal: print a line, flush, exit 0. Launch/output/exit coverage."
+[programs.hello.sources]
+cpp = "hello/hello.cpp"
+rust = "hello/hello.rs"
+go = "hello/hello.go"
+
+[programs.spin]
+description = "Long-running tick loop with typed locals, recursion, a global, and worker threads."
+[programs.spin.sources]
+cpp = "spin/spin.cpp"
+rust = "spin/spin.rs"
+go = "spin/spin.go"
+
+[programs.crash]
+description = "Deterministic fault (segv/abort/divzero) for exception and postmortem tests."
+[programs.crash.sources]
+cpp = "crash/crash.cpp"
+rust = "crash/crash.rs"
+go = "crash/crash.go"
+
+
+# ---------------------------------------------------------------------------
+# Platforms. Each entry is one (os, arch, kind) target. `runner` names the
+# GitHub Actions runner that builds it; cross targets (android, wasm) are
+# built on ubuntu. Toolchain-specific keys (rust_target, go.*, android.*)
+# are consumed by the matching builder/toolchains module.
+# ---------------------------------------------------------------------------
+
+# ---- Host-native --------------------------------------------------------
+[[platforms]]
+id = "linux-x86_64"
+os = "linux"
+arch = "x86_64"
+kind = "native"
+runner = "ubuntu-latest"
+object_format = "elf"
+rust_target = "x86_64-unknown-linux-gnu"
+go = { GOOS = "linux", GOARCH = "amd64" }
+
+[[platforms]]
+id = "macos-arm64"
+os = "macos"
+arch = "arm64"
+kind = "native"
+runner = "macos-latest"
+object_format = "macho"
+rust_target = "aarch64-apple-darwin"
+go = { GOOS = "darwin", GOARCH = "arm64" }
+
+[[platforms]]
+id = "windows-x86_64"
+os = "windows"
+arch = "x86_64"
+kind = "native"
+runner = "windows-latest"
+object_format = "pe"
+rust_target = "x86_64-pc-windows-msvc"
+go = { GOOS = "windows", GOARCH = "amd64" }
+
+# ---- Android (cross-compiled on the linux runner via the NDK) -----------
+# Debugged remotely: lldb-server pushed to the device/emulator in platform
+# mode, lldb-dap on the host attaches over `adb forward`. fixture.json
+# carries the run recipe; see docs/DESIGN.md.
+[[platforms]]
+id = "android-arm64-v8a"
+os = "android"
+arch = "arm64-v8a"
+kind = "android"
+runner = "ubuntu-latest"
+object_format = "elf"
+rust_target = "aarch64-linux-android"
+go = { GOOS = "android", GOARCH = "arm64" }
+android = { abi = "arm64-v8a", api = 24, ndk_triple = "aarch64-linux-android" }
+
+[[platforms]]
+id = "android-armeabi-v7a"
+os = "android"
+arch = "armeabi-v7a"
+kind = "android"
+runner = "ubuntu-latest"
+object_format = "elf"
+rust_target = "armv7-linux-androideabi"
+go = { GOOS = "android", GOARCH = "arm" }
+android = { abi = "armeabi-v7a", api = 24, ndk_triple = "armv7a-linux-androideabi" }
+
+[[platforms]]
+id = "android-x86_64"
+os = "android"
+arch = "x86_64"
+kind = "android"
+runner = "ubuntu-latest"
+object_format = "elf"
+rust_target = "x86_64-linux-android"
+go = { GOOS = "android", GOARCH = "amd64" }
+android = { abi = "x86_64", api = 24, ndk_triple = "x86_64-linux-android" }
+
+[[platforms]]
+id = "android-x86"
+os = "android"
+arch = "x86"
+kind = "android"
+runner = "ubuntu-latest"
+object_format = "elf"
+rust_target = "i686-linux-android"
+go = { GOOS = "android", GOARCH = "386" }
+android = { abi = "x86", api = 24, ndk_triple = "i686-linux-android" }
+
+# ---- WASM (cross-compiled on the linux runner) --------------------------
+# Architecture-neutral: one artifact debugged on any host via wasmtime's
+# gdbstub (`wasmtime run -g`) + a wasm-aware lldb (`process connect
+# --plugin wasm`). Embedded DWARF only. See docs/DESIGN.md WASM section.
+[[platforms]]
+id = "wasm-wasm32-wasip1"
+os = "wasm"
+arch = "wasm32"
+kind = "wasm"
+runner = "ubuntu-latest"
+object_format = "wasm"
+rust_target = "wasm32-wasip1"
+go = { GOOS = "wasip1", GOARCH = "wasm" }
+wasi = { target = "wasm32-wasip1" }

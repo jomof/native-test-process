@@ -1,0 +1,65 @@
+name: Release
+
+# Builds the whole matrix on every runner (by reusing build.yml), merges the
+# per-runner zips, writes the aggregate manifest.json, and publishes them all
+# to a GitHub Release named by `release_tag` in matrix.toml. Consumers pin that
+# tag and download `<release_base>/<tag>/<zip>`.
+
+on:
+  push:
+    tags: [ "v*" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download all runner zips
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fixtures-*
+          merge-multiple: true
+          path: dist
+
+      - name: Write manifest.json
+        run: python -m builder manifest
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            python - <<'PY' >> "$GITHUB_OUTPUT"
+import tomllib, pathlib
+data = tomllib.loads(pathlib.Path("matrix.toml").read_text())
+print(f"tag={data['release_tag']}")
+PY
+          fi
+
+      - name: Publish Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.tag.outputs.tag }}"
+          echo "Publishing release $tag with $(ls dist/*.zip | wc -l) zips"
+          # Recreate the release so re-runs are idempotent.
+          gh release delete "$tag" --yes --cleanup-tag || true
+          gh release create "$tag" \
+            --title "$tag" \
+            --notes "Prebuilt native test-process fixtures. See manifest.json for the full configuration index and per-zip checksums." \
+            dist/*.zip dist/manifest.json

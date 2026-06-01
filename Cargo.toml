@@ -1,0 +1,35 @@
+# Rust side of the fixtures. One package, one binary per program, sources
+# kept under fixtures/ alongside their C++/Go siblings. The builder invokes
+# `cargo build --bin <program> [--target <triple>]` per configuration.
+[package]
+name = "native-test-process-fixtures"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+# Worker threads in `spin`. On by default; disabled for the WASM target
+# (`--no-default-features`), which has no std::thread.
+default = ["threads"]
+threads = []
+
+[[bin]]
+name = "hello"
+path = "fixtures/hello/hello.rs"
+
+[[bin]]
+name = "spin"
+path = "fixtures/spin/spin.rs"
+
+[[bin]]
+name = "crash"
+path = "fixtures/crash/crash.rs"
+
+# Dev profile is what the builder uses: -O0 with full DWARF so source-line
+# breakpoints and locals are faithful. `debug = 2` => full debug info; on
+# wasm32-wasip1 this lands as embedded DWARF inside the .wasm.
+[profile.dev]
+opt-level = 0
+debug = 2
+# panic=unwind (the default) keeps a clean stop frame on the divzero panic
+# in `crash`; do not switch to abort here.
