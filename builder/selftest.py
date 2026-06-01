@@ -232,8 +232,8 @@ def _validate_wasm(meta: dict, work: Path, allow_skip: bool) -> Result:
     wasmtime = _wasmtime_bin()
     lldb = _wasm_lldb_bin()
     if not wasmtime or not lldb:
-        # No wasm-aware debugger here; validate the embedded DWARF statically.
-        return _validate_static_dwarf(meta, work, allow_skip)
+        # No wasm-aware debugger here; validate the embedded debug info statically.
+        return _validate_static(meta, work, allow_skip)
 
     primary = meta["primary"]
     bp = meta["breakpoints"]["loop_body"]
