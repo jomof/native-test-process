@@ -42,14 +42,11 @@ jobs:
         id: tag
         run: |
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            tag="${GITHUB_REF_NAME}"
           else
-            python - <<'PY' >> "$GITHUB_OUTPUT"
-import tomllib, pathlib
-data = tomllib.loads(pathlib.Path("matrix.toml").read_text())
-print(f"tag={data['release_tag']}")
-PY
+            tag="$(python -c 'import tomllib,pathlib; print(tomllib.loads(pathlib.Path("matrix.toml").read_text())["release_tag"])')"
           fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Publish Release
         env:
