@@ -103,7 +103,7 @@ plus `manifest.json`:
 ```json
 {
   "schema": 1,
-  "release_tag": "v0.1.0",
+  "release_tag": "v0.1.1",
   "configurations": [
     {
       "id": "spin-linux-x86_64-cpp-separate",

@@ -19,7 +19,7 @@ schema = 1
 # Pinned tag this build set publishes under. Bumping it is the single
 # action that moves a consumer (the DAP project) to a new fixture build,
 # mirroring jomof/lldb-testing + LldbDapDownloader.RELEASE_TAG.
-release_tag = "v0.1.0"
+release_tag = "v0.1.1"
 
 # The language dimension. Each maps to one idiomatic toolchain module in
 # builder/toolchains/.
